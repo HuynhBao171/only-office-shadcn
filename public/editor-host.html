@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html style="height: 100%; margin: 0">
+  <head>
+    <title>OnlyOffice Editor Host</title>
+  </head>
+  <body style="height: 100%; margin: 0">
+    <div id="placeholder" style="height: 100%"></div>
+    <script>
+      let currentConfig = null; // Store config globally
+
+      window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+
+        const { command, config, documentServerUrl } = event.data;
+
+        // Xử lý lệnh từ component cha
+        if (command) {
+          if (command === 'forceSave' && window.docEditor) {
+            console.log('[IFRAME] Received forceSave command. Attempting to save...');
+            try {
+              // Sử dụng requestSave() - API chính thức của OnlyOffice
+              if (typeof window.docEditor.requestSave === 'function') {
+                console.log('[IFRAME] Using requestSave() method');
+                window.docEditor.requestSave();
+              } else {
+                console.warn('[IFRAME] requestSave() method not available');
+              }
+            } catch (error) {
+              console.error('[IFRAME] Error during save operation:', error);
+            }
+          }
+          return;
+        }
+
+        // Xử lý config để khởi tạo editor
+        if (config && documentServerUrl) {
+          // Store config globally để sử dụng trong callbacks
+          currentConfig = config;
+
+          // Cleanup existing editor if any
+          if (window.docEditor) {
+            try {
+              window.docEditor.destroyEditor();
+            } catch (e) {
+              console.warn('[IFRAME] Error destroying existing editor:', e);
+            }
+            window.docEditor = null;
+          }
+
+          const script = document.createElement("script");
+          script.src = `${documentServerUrl}web-apps/apps/api/documents/api.js`;
+
+          script.onerror = function() {
+            window.parent.postMessage({
+              event: 'scriptLoadError',
+              key: currentConfig.document.key
+            }, window.location.origin);
+          };
+
+          script.onload = () => {
+            try {
+              // Enhance config with events
+              const enhancedConfig = {
+                ...currentConfig,
+                events: {
+                  ...currentConfig.events,
+
+                  onDocumentReady: function() {
+                    console.log('[IFRAME] OnlyOffice document ready');
+                    // Send editorReady với đúng key
+                    window.parent.postMessage({
+                      event: 'editorReady',
+                      key: currentConfig.document.key
+                    }, window.location.origin);
+                  },
+
+                  onDocumentStateChange: function(event) {
+                    if (event.data === true) {
+                      console.log('[IFRAME] Document has changes.');
+                      // Send hasChanges với đúng key
+                      window.parent.postMessage({
+                        event: 'hasChanges',
+                        key: currentConfig.document.key
+                      }, window.location.origin);
+                    }
+                  },
+
+                  onRequestSave: function() {
+                    console.log('[IFRAME] OnlyOffice onRequestSave triggered');
+                    window.parent.postMessage({
+                      event: 'saveRequested',
+                      key: currentConfig.document.key
+                    }, window.location.origin);
+                  },
+
+                  onError: function(event) {
+                    console.error('[IFRAME] OnlyOffice error:', event);
+                    window.parent.postMessage({
+                      event: 'editorError',
+                      key: currentConfig.document.key,
+                      error: event
+                    }, window.location.origin);
+                  }
+                }
+              };
+
+              // Initialize editor với enhanced config
+              window.docEditor = new DocsAPI.DocEditor("placeholder", enhancedConfig);
+              console.log('[IFRAME] Editor initialized successfully with key:', currentConfig.document.key);
+
+            } catch (error) {
+              console.error('[IFRAME] Error initializing editor:', error);
+              window.parent.postMessage({
+                event: 'editorInitError',
+                key: currentConfig.document.key,
+                error: error.message
+              }, window.location.origin);
+            }
+          };
+
+          document.head.appendChild(script);
+        }
+      });
+    </script>
+  </body>
+</html>
