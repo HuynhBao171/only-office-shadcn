@@ -86,7 +86,7 @@ function App() {
               title="업로드 파일 리스트 (Main)"
               initialFiles={mainFilesList}
               initialSelectedFile={mainFilesList[0]}
-              documentServerUrl="" // URL của OnlyOffice Document Server
+              documentServerUrl="http://192.168.100.116:8080" // URL của OnlyOffice Document Server
               fileServerUrl="http://192.168.100.116:8085"
               className="h-full"
             />
@@ -105,7 +105,7 @@ function App() {
               title="업로드 파일 리스트 (Sub)"
               initialFiles={subFilesList}
               initialSelectedFile={subFilesList[0]}
-              documentServerUrl="" // URL của OnlyOffice Document Server
+              documentServerUrl="http://192.168.100.116:8080" // URL của OnlyOffice Document Server
               fileServerUrl="http://192.168.100.116:8085"
               className="h-full"
             />
