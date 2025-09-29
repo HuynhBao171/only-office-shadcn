@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Header } from "./components/Header";
 import { Checklist } from "./components/Checklist";
-import { MainFiles } from "./components/MainFiles";
-import { SubFiles } from "./components/SubFiles";
+
 import { FloatingComments } from "./components/FloatingComments";
 import { Separator } from "./components/ui/separator";
+import { DocumentViewer } from "./components/DocumentViewer";
 
 interface Comment {
   id: number;
@@ -67,25 +67,31 @@ function App() {
     },
   ]);
 
+  const mainFilesList = ["부가가치세 신고서4.xlsx", "졸업증 부가세 종료표.pdf"];
+  const subFilesList = ["졸업증 부가세 종료표.xlsx", "부가가치세 신고서4.pdf"];
+
   return (
     <div className="flex flex-col h-screen bg-white relative">
-      {/* Header */}
       <Header />
 
-      {/* Main Content */}
       <div className="flex-1 px-6 pt-4 pb-8">
         <div className="flex gap-6 h-full">
-          {/* Checklist Column - 1/2 width of MainFiles */}
           <div className="flex-[1]">
             <Checklist className="h-full" />
           </div>
 
-          {/* MainFiles Column - Full width */}
           <div className="flex-[2]">
-            <MainFiles className="h-full" />
+            <DocumentViewer
+              instanceName="MainFiles"
+              title="업로드 파일 리스트 (Main)"
+              initialFiles={mainFilesList}
+              initialSelectedFile={mainFilesList[0]}
+              documentServerUrl="" // URL của OnlyOffice Document Server
+              fileServerUrl="http://192.168.100.116:8085"
+              className="h-full"
+            />
           </div>
 
-          {/* Separator between MainFiles and SubFiles */}
           <div className="flex items-center">
             <Separator
               orientation="vertical"
@@ -93,12 +99,18 @@ function App() {
             />
           </div>
 
-          {/* SubFiles Column - Same width as MainFiles */}
           <div className="flex-[2]">
-            <SubFiles className="h-full" />
+            <DocumentViewer
+              instanceName="SubFiles"
+              title="업로드 파일 리스트 (Sub)"
+              initialFiles={subFilesList}
+              initialSelectedFile={subFilesList[0]}
+              documentServerUrl="" // URL của OnlyOffice Document Server
+              fileServerUrl="http://192.168.100.116:8085"
+              className="h-full"
+            />
           </div>
 
-          {/* Right Separator */}
           <div className="flex items-center">
             <Separator
               orientation="vertical"
@@ -108,7 +120,6 @@ function App() {
         </div>
       </div>
 
-      {/* Floating Comments Component - Read Only */}
       <FloatingComments comments={comments} />
     </div>
   );

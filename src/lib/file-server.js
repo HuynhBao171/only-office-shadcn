@@ -5,14 +5,41 @@ const cors = require("cors");
 const app = express();
 const PORT = 8080;
 
-// Enable CORS cho tất cả routes
+// Simple CORS configuration - FIX LỖI
 app.use(
   cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: true, // Thay đổi từ "*" thành true
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Cache-Control",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+    ],
+    credentials: false,
+    optionsSuccessStatus: 200,
   })
 );
+
+// Manual CORS headers as fallback
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control"
+  );
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+
+  next();
+});
 
 // Middleware để log requests
 app.use((req, res, next) => {
@@ -20,11 +47,39 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve PDF.js worker files
+app.use(
+  "/pdfjs",
+  express.static(path.join(__dirname, "../public/pdfjs"), {
+    setHeaders: (res, filePath) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept"
+      );
+
+      if (filePath.endsWith(".mjs") || filePath.endsWith(".js")) {
+        res.setHeader("Content-Type", "application/javascript");
+      }
+      res.setHeader("Cache-Control", "public, max-age=31536000");
+    },
+  })
+);
+
 // Serve static files từ thư mục 'public/files'
 app.use(
   "/files",
   express.static(path.join(__dirname, "public/files"), {
     setHeaders: (res, filePath) => {
+      // Add CORS headers
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control"
+      );
+
       if (filePath.endsWith(".xlsx") || filePath.endsWith(".xls")) {
         res.setHeader(
           "Content-Type",
@@ -56,7 +111,7 @@ app.get("/health", (req, res) => {
   res.json({
     status: "OK",
     timestamp: new Date().toISOString(),
-    viewer: "PDFTron WebViewer",
+    viewer: "PDF.js + PDFTron WebViewer",
   });
 });
 
@@ -79,12 +134,12 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(
-    `📁 PDFTron File Server is running on http://192.168.100.116:${PORT}`
-  );
+  console.log(`📁 File Server is running on http://192.168.100.116:${PORT}`);
   console.log(
     `🔗 Files can be accessed at: http://192.168.100.116:${PORT}/files/`
   );
   console.log(`📊 WebViewer lib: http://192.168.100.116:${PORT}/webviewer/`);
+  console.log(`🔧 PDF.js worker: http://192.168.100.116:${PORT}/pdfjs/`);
   console.log(`📋 File list: http://192.168.100.116:${PORT}/api/files`);
+  console.log(`✅ CORS configured for PDF.js compatibility`);
 });
